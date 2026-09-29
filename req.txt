@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# NetScope / Intercept - Automated Setup & Dependency Installer
+# Usage:
+#   bash req.txt
+#   or: bash req.sh
+# ==============================================================================
+
+set -e
+
+echo ""
+echo "===================================================================="
+echo "      NetScope / Intercept - Complete Dependency Installer         "
+echo "===================================================================="
+echo ""
+
+# ------------------------------------------------------------------------------
+# 1. Environment & Prerequisite Checks
+# ------------------------------------------------------------------------------
+echo "[*] Checking system requirements..."
+
+# Check Node.js
+if command -v node >/dev/null 2>&1; then
+    NODE_VERSION=$(node -v)
+    echo "  [✔] Node.js detected: $NODE_VERSION"
+else
+    echo "  [✘] Error: Node.js is not installed or not in PATH."
+    echo "      Please install Node.js (v18+) from: https://nodejs.org/"
+    exit 1
+fi
+
+# Check npm
+if command -v npm >/dev/null 2>&1; then
+    NPM_VERSION=$(npm -v)
+    echo "  [✔] npm detected: v$NPM_VERSION"
+else
+    echo "  [✘] Error: npm is not installed or not in PATH."
+    exit 1
+fi
+
+# Detect working Python command (supports Linux, macOS, and Windows py launcher)
+PYTHON_CMD=""
+for cmd in python3 python py; do
+    if command -v "$cmd" >/dev/null 2>&1; then
+        if "$cmd" -c "import sys" >/dev/null 2>&1; then
+            PYTHON_CMD="$cmd"
+            break
+        fi
+    fi
+done
+
+if [ -z "$PYTHON_CMD" ]; then
+    echo "  [✘] Error: Working Python installation not found."
+    echo "      Please install Python 3.10+ from: https://www.python.org/"
+    exit 1
+fi
+
+PY_VERSION=$("$PYTHON_CMD" --version 2>&1)
+echo "  [✔] Python detected: $PY_VERSION ($PYTHON_CMD)"
+
+# ------------------------------------------------------------------------------
+# 2. Install Node.js Dependencies
+# ------------------------------------------------------------------------------
+echo ""
+echo "--------------------------------------------------------------------"
+echo "[1/3] Installing Node.js packages (npm install)..."
+echo "--------------------------------------------------------------------"
+npm install
+
+# ------------------------------------------------------------------------------
+# 3. Install Python Dependencies
+# ------------------------------------------------------------------------------
+echo ""
+echo "--------------------------------------------------------------------"
+echo "[2/3] Installing Python dependencies (mitmproxy, selenium, etc.)..."
+echo "--------------------------------------------------------------------"
+
+# Upgrade pip if possible (non-fatal if permissions restricted)
+"$PYTHON_CMD" -m pip install --upgrade pip --quiet 2>/dev/null || true
+
+# Install requirements
+if [ -f "requirements.txt" ]; then
+    "$PYTHON_CMD" -m pip install -r requirements.txt
+elif [ -f "proxy/requirements.txt" ]; then
+    "$PYTHON_CMD" -m pip install -r proxy/requirements.txt
+else
+    "$PYTHON_CMD" -m pip install "mitmproxy>=10.0.0" "websockets>=12.0" "requests>=2.31.0" "selenium>=4.15.0"
+fi
+
+# ------------------------------------------------------------------------------
+# 4. Build NetScope Project
+# ------------------------------------------------------------------------------
+echo ""
+echo "--------------------------------------------------------------------"
+echo "[3/3] Compiling and building application bundles..."
+echo "--------------------------------------------------------------------"
+npm run build
+
+echo ""
+echo "===================================================================="
+echo "  [SUCCESS] All dependencies installed and application compiled!   "
+echo "===================================================================="
+echo ""
+echo "  Next Steps:"
+echo "    • Start in Development Mode : npm run dev"
+echo "    • Launch Production Electron: npm start"
+echo "    • Run Mock Test Server      : npm run mock-server"
+echo "    • Run Test Suite            : npm test"
+echo ""
+echo "===================================================================="
